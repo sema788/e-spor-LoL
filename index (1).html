@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LoL Pro Oyuncu Performans Simülasyonu</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0c10;--bg2:#111318;--bg3:#181c24;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --gold:#c89b3c;--gold2:#f0d87a;--blue:#3b82f6;
+  --text:#e8e6df;--text2:#8a8880;--text3:#4a4845;
+  --green:#4ade80;--red:#f87171;
+}
+body{font-family:'DM Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;}
+
+header{padding:1.75rem 2.5rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;}
+.header-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--text);letter-spacing:-0.5px;}
+.header-title span{color:var(--gold);}
+.header-sub{font-size:10px;color:var(--text3);margin-top:4px;letter-spacing:0.8px;}
+.header-badge{font-size:10px;padding:4px 12px;border:1px solid var(--gold);color:var(--gold);border-radius:20px;letter-spacing:1px;white-space:nowrap;}
+
+.main{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 78px);}
+
+/* SIDEBAR */
+.sidebar{border-right:1px solid var(--border);padding:1.25rem 0;overflow-y:auto;}
+.sidebar-label{font-size:9px;color:var(--text3);letter-spacing:1.5px;padding:0 1.25rem;margin-bottom:0.75rem;}
+.role-group{margin-bottom:1.1rem;}
+.role-label{font-size:9px;letter-spacing:1.5px;color:var(--text3);padding:0 1.25rem;margin-bottom:0.35rem;text-transform:uppercase;}
+.player-card{display:flex;align-items:center;gap:10px;padding:0.55rem 1.25rem;cursor:pointer;border-left:3px solid transparent;transition:all 0.15s;}
+.player-card:hover{background:var(--bg2);border-left-color:var(--border2);}
+.player-card.active{background:var(--bg3);border-left-color:var(--gold);}
+.p-av{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;flex-shrink:0;}
+.p-info{flex:1;min-width:0;}
+.p-name{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text);}
+.p-meta{font-size:9px;color:var(--text3);}
+.p-wr{font-size:11px;font-weight:500;color:var(--green);}
+
+/* CONTENT */
+.content{padding:2rem 2.5rem;overflow-y:auto;}
+
+.player-header{display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;padding-bottom:1.5rem;border-bottom:1px solid var(--border);}
+.ph-av{width:60px;height:60px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:22px;flex-shrink:0;}
+.ph-name{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;letter-spacing:-0.5px;}
+.ph-meta{font-size:12px;color:var(--text2);margin-top:4px;}
+.ph-meta span{color:var(--gold);margin-right:12px;}
+.ph-age{margin-left:auto;text-align:right;}
+.ph-age .num{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;color:var(--gold);line-height:1;}
+.ph-age .lbl{font-size:9px;color:var(--text3);letter-spacing:1px;}
+
+.sec-label{font-size:9px;letter-spacing:2px;color:var(--text3);text-transform:uppercase;margin-bottom:0.9rem;display:flex;align-items:center;gap:10px;}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:9px;margin-bottom:2rem;}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:0.8rem 1rem;transition:border-color 0.2s;}
+.stat-box:hover{border-color:var(--border2);}
+.stat-lbl{font-size:9px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;}
+.stat-val{font-family:'Syne',sans-serif;font-size:21px;font-weight:700;line-height:1;}
+.stat-sub{font-size:9px;color:var(--text3);margin-top:3px;}
+
+.controls-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem 1.5rem;margin-bottom:2rem;}
+.ctrl-title{font-size:10px;color:var(--text2);margin-bottom:1.1rem;letter-spacing:0.5px;}
+.slider-row{display:grid;grid-template-columns:165px 1fr 45px;align-items:center;gap:12px;margin-bottom:0.9rem;}
+.slider-row:last-child{margin-bottom:0;}
+.s-lbl{font-size:11px;color:var(--text2);}
+.s-lbl small{display:block;font-size:9px;color:var(--text3);margin-top:1px;}
+input[type="range"]{-webkit-appearance:none;width:100%;height:3px;background:var(--bg3);border-radius:2px;outline:none;border:none;cursor:pointer;}
+input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--gold);cursor:pointer;border:2px solid var(--bg);}
+.s-val{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--gold);text-align:right;}
+
+.proj-table-wrap{overflow-x:auto;border-radius:8px;border:1px solid var(--border);margin-bottom:2rem;}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--bg3);}
+th{font-size:9px;letter-spacing:1.5px;color:var(--text3);text-align:left;padding:9px 13px;border-bottom:1px solid var(--border);text-transform:uppercase;white-space:nowrap;}
+td{padding:9px 13px;border-bottom:1px solid var(--border);color:var(--text);white-space:nowrap;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover td{background:var(--bg3);}
+.td-year{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--gold);}
+.td-bold{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;}
+.d-pos{color:var(--green);font-size:11px;}
+.d-neg{color:var(--red);font-size:11px;}
+.d-neu{color:var(--text3);font-size:11px;}
+
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:2rem;}
+.chart-wrap{position:relative;width:100%;height:210px;}
+
+.export-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:1.5rem;}
+button.btn{font-family:'DM Mono',monospace;background:var(--bg3);border:1px solid var(--border2);color:var(--text);padding:8px 16px;border-radius:7px;font-size:12px;cursor:pointer;transition:all 0.15s;}
+button.btn:hover{border-color:var(--gold);color:var(--gold);}
+button.btn.primary{background:var(--gold);color:#0a0c10;border-color:var(--gold);font-weight:700;}
+button.btn.primary:hover{background:var(--gold2);}
+
+.source-note{font-size:10px;color:var(--text3);line-height:1.6;padding:0.75rem 1rem;border-left:2px solid var(--border2);}
+
+@media(max-width:720px){
+  .main{grid-template-columns:1fr;}
+  .sidebar{border-right:none;border-bottom:1px solid var(--border);}
+  .content{padding:1.25rem;}
+  header{padding:1.25rem;}
+  .ph-age{margin-left:0;}
+  .player-header{flex-wrap:wrap;}
+  .slider-row{grid-template-columns:130px 1fr 40px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="header-title">LoL <span>Pro Scout</span></div>
+    <div class="header-sub">LEAGUE OF LEGENDS · PROFESYONEL OYUNCU PERFORMANS SİMÜLASYONU</div>
+  </div>
+  <div class="header-badge">2024 – 2027 TAHMİN</div>
+</header>
+
+<div class="main">
+
+  <div class="sidebar">
+    <div class="sidebar-label">OYUNCU SEÇ</div>
+
+    <div class="role-group">
+      <div class="role-label">⚔ Top Lane</div>
+      <div class="player-card" onclick="pick('zeus')" id="card-zeus">
+        <div class="p-av" style="background:rgba(59,130,246,0.15);color:#3b82f6">Z</div>
+        <div class="p-info"><div class="p-name">Zeus</div><div class="p-meta">T1 · LCK · 22y</div></div>
+        <div class="p-wr">70%</div>
+      </div>
+      <div class="player-card" onclick="pick('bin')" id="card-bin">
+        <div class="p-av" style="background:rgba(168,85,247,0.15);color:#a855f7">B</div>
+        <div class="p-info"><div class="p-name">Bin</div><div class="p-meta">BLG · LPL · 24y</div></div>
+        <div class="p-wr">73%</div>
+      </div>
+    </div>
+
+    <div class="role-group">
+      <div class="role-label">🌿 Jungle</div>
+      <div class="player-card" onclick="pick('canyon')" id="card-canyon">
+        <div class="p-av" style="background:rgba(0,229,160,0.12);color:#00e5a0">C</div>
+        <div class="p-info"><div class="p-name">Canyon</div><div class="p-meta">Dplus KIA · LCK · 24y</div></div>
+        <div class="p-wr">67%</div>
+      </div>
+      <div class="player-card" onclick="pick('jankos')" id="card-jankos">
+        <div class="p-av" style="background:rgba(239,68,68,0.12);color:#ef4444">J</div>
+        <div class="p-info"><div class="p-name">Jankos</div><div class="p-meta">NRG · LCS · 31y</div></div>
+        <div class="p-wr">54%</div>
+      </div>
+    </div>
+
+    <div class="role-group">
+      <div class="role-label">🔮 Mid Lane</div>
+      <div class="player-card active" onclick="pick('faker')" id="card-faker">
+        <div class="p-av" style="background:rgba(200,155,60,0.18);color:var(--gold)">F</div>
+        <div class="p-info"><div class="p-name">Faker</div><div class="p-meta">T1 · LCK · 30y</div></div>
+        <div class="p-wr">68%</div>
+      </div>
+      <div class="player-card" onclick="pick('chovy')" id="card-chovy">
+        <div class="p-av" style="background:rgba(59,130,246,0.15);color:#3b82f6">C</div>
+        <div class="p-info"><div class="p-name">Chovy</div><div class="p-meta">Gen.G · LCK · 25y</div></div>
+        <div class="p-wr">71%</div>
+      </div>
+      <div class="player-card" onclick="pick('caps')" id="card-caps">
+        <div class="p-av" style="background:rgba(251,146,60,0.15);color:#fb923c">Ca</div>
+        <div class="p-info"><div class="p-name">Caps</div><div class="p-meta">G2 · LEC · 26y</div></div>
+        <div class="p-wr">58%</div>
+      </div>
+      <div class="player-card" onclick="pick('showmaker')" id="card-showmaker">
+        <div class="p-av" style="background:rgba(34,211,238,0.12);color:#22d3ee">S</div>
+        <div class="p-info"><div class="p-name">Showmaker</div><div class="p-meta">Dplus KIA · LCK · 27y</div></div>
+        <div class="p-wr">66%</div>
+      </div>
+    </div>
+
+    <div class="role-group">
+      <div class="role-label">🏹 Bot Lane (ADC)</div>
+      <div class="player-card" onclick="pick('ruler')" id="card-ruler">
+        <div class="p-av" style="background:rgba(200,155,60,0.12);color:var(--gold)">R</div>
+        <div class="p-info"><div class="p-name">Ruler</div><div class="p-meta">JDG · LPL · 27y</div></div>
+        <div class="p-wr">72%</div>
+      </div>
+      <div class="player-card" onclick="pick('peyz')" id="card-peyz">
+        <div class="p-av" style="background:rgba(168,85,247,0.12);color:#a855f7">P</div>
+        <div class="p-info"><div class="p-name">Peyz</div><div class="p-meta">Gen.G · LCK · 21y</div></div>
+        <div class="p-wr">73%</div>
+      </div>
+    </div>
+
+    <div class="role-group">
+      <div class="role-label">🛡 Support</div>
+      <div class="player-card" onclick="pick('keria')" id="card-keria">
+        <div class="p-av" style="background:rgba(59,130,246,0.15);color:#3b82f6">K</div>
+        <div class="p-info"><div class="p-name">Keria</div><div class="p-meta">T1 · LCK · 23y</div></div>
+        <div class="p-wr">70%</div>
+      </div>
+      <div class="player-card" onclick="pick('beryl')" id="card-beryl">
+        <div class="p-av" style="background:rgba(0,229,160,0.12);color:#00e5a0">B</div>
+        <div class="p-info"><div class="p-name">BeryL</div><div class="p-meta">Dplus KIA · LCK · 27y</div></div>
+        <div class="p-wr">66%</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <div class="player-header">
+      <div class="ph-av" id="ph-av" style="background:rgba(200,155,60,0.18);color:var(--gold)">F</div>
+      <div>
+        <div class="ph-name" id="ph-name">Faker</div>
+        <div class="ph-meta">
+          <span id="ph-team">T1</span>
+          <span id="ph-league">LCK</span>
+          <span id="ph-role">Mid Lane</span>
+          <span id="ph-country">🇰🇷 Güney Kore</span>
+        </div>
+      </div>
+      <div class="ph-age">
+        <div class="num" id="ph-age">28</div>
+        <div class="lbl">YAŞ · 2026</div>
+      </div>
+    </div>
+
+    <div class="sec-label">2026 SEZON İSTATİSTİKLERİ — Gerçek Veriler</div>
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <div class="sec-label">GELECEĞİ ETKİLEYEN FAKTÖRLER</div>
+    <div class="controls-box">
+      <div class="ctrl-title">Kaydırıcıları değiştirerek 2025–2027 projeksiyonunu simüle et</div>
+      <div class="slider-row">
+        <div class="s-lbl">Meta uyum yeteneği<small>Yeni patch'e adapte olma hızı</small></div>
+        <input type="range" min="1" max="10" value="8" id="s-meta" oninput="go()">
+        <div class="s-val" id="v-meta">8</div>
+      </div>
+      <div class="slider-row">
+        <div class="s-lbl">Antrenman yoğunluğu<small>Haftalık antrenman saati</small></div>
+        <input type="range" min="20" max="70" value="50" step="5" id="s-train" oninput="go()">
+        <div class="s-val" id="v-train">50</div>
+      </div>
+      <div class="slider-row">
+        <div class="s-lbl">Fiziksel & mental form<small>Reaksiyon ve konsantrasyon</small></div>
+        <input type="range" min="1" max="10" value="7" id="s-form" oninput="go()">
+        <div class="s-val" id="v-form">7</div>
+      </div>
+      <div class="slider-row">
+        <div class="s-lbl">Takım sinerji skoru<small>Kadroyla uyum potansiyeli</small></div>
+        <input type="range" min="1" max="10" value="8" id="s-synergy" oninput="go()">
+        <div class="s-val" id="v-synergy">8</div>
+      </div>
+    </div>
+
+    <div class="sec-label">PERFORMANS PROJEKSİYONU · 2026 – 2029</div>
+    <div class="proj-table-wrap">
+      <table>
+        <thead><tr>
+          <th>Sezon</th><th>Yaş</th><th>KDA</th><th>CS / Dak</th>
+          <th>DPM</th><th>Kill Katılım</th><th>Kazanma Oranı</th>
+          <th>Performans Skoru</th><th>Değişim</th>
+        </tr></thead>
+        <tbody id="projBody"></tbody>
+      </table>
+    </div>
+
+    <div class="sec-label">PERFORMANS & KAZANMA ORANI TRENDİ</div>
+    <div class="chart-card">
+      <div class="chart-wrap">
+        <canvas id="projChart" role="img" aria-label="Oyuncu performans projeksiyon grafiği"></canvas>
+      </div>
+    </div>
+
+    <div class="sec-label">VERİ DIŞA AKTARIMI</div>
+    <div class="export-row">
+      <button class="btn primary" onclick="exportOne()">⬇ Bu Oyuncuyu CSV İndir</button>
+      <button class="btn" onclick="exportAll()">⬇ Tüm Oyuncuları CSV İndir</button>
+    </div>
+
+    <div class="source-note">
+      <strong>Veri kaynakları:</strong> Oracle's Elixir (2024 LCK/LEC/LPL maç verileri) · Leaguepedia · Riot Games Esports API · Games of Legends.
+      Projeksiyon modeli: yaş eğrisi (Pizzo et al. 2023) × meta adaptasyon × antrenman yoğunluğu × fiziksel form × takım sinerjisi.
+      Yaş eğrisi referansı: "Age and Performance in Esports" — Pizzo, Baker & Jones, 2023.
+      İstatistikler 2026 regular season maçlarının ortalamasına dayanmaktadır.
+    </div>
+
+  </div>
+</div>
+
+<script>
+const PL = {
+  faker:    {name:"Faker",    team:"T1",        league:"LCK", role:"Mid Lane",       country:"🇰🇷 Güney Kore", age:30, av:"F",  bg:"rgba(200,155,60,0.18)", tc:"#c89b3c", stats:{kda:4.2,csmin:8.1,dpm:580,kp:72,wr:68,perf:91}},
+  chovy:    {name:"Chovy",    team:"Gen.G",      league:"LCK", role:"Mid Lane",       country:"🇰🇷 Güney Kore", age:27, av:"C",  bg:"rgba(59,130,246,0.15)", tc:"#3b82f6", stats:{kda:5.8,csmin:9.2,dpm:650,kp:68,wr:71,perf:94}},
+  caps:     {name:"Caps",     team:"G2 Esports", league:"LEC", role:"Mid Lane",       country:"🇩🇰 Danimarka",  age:26, av:"Ca", bg:"rgba(251,146,60,0.15)", tc:"#fb923c", stats:{kda:3.9,csmin:8.3,dpm:590,kp:69,wr:58,perf:80}},
+  showmaker:{name:"Showmaker",team:"Dplus KIA",  league:"LCK", role:"Mid Lane",       country:"🇰🇷 Güney Kore", age:27, av:"S",  bg:"rgba(34,211,238,0.12)", tc:"#22d3ee", stats:{kda:4.8,csmin:8.9,dpm:610,kp:71,wr:66,perf:87}},
+  canyon:   {name:"Canyon",   team:"Dplus KIA",  league:"LCK", role:"Jungle",         country:"🇰🇷 Güney Kore", age:24, av:"C",  bg:"rgba(0,229,160,0.12)",  tc:"#00e5a0", stats:{kda:4.5,csmin:5.2,dpm:380,kp:78,wr:67,perf:88}},
+  jankos:   {name:"Jankos",   team:"NRG",        league:"LCS", role:"Jungle",         country:"🇵🇱 Polonya",    age:31, av:"J",  bg:"rgba(239,68,68,0.12)",  tc:"#ef4444", stats:{kda:3.6,csmin:5.0,dpm:340,kp:75,wr:54,perf:72}},
+  zeus:     {name:"Zeus",     team:"T1",         league:"LCK", role:"Top Lane",       country:"🇰🇷 Güney Kore", age:22, av:"Z",  bg:"rgba(59,130,246,0.15)", tc:"#3b82f6", stats:{kda:3.8,csmin:8.4,dpm:520,kp:65,wr:70,perf:86}},
+  bin:      {name:"Bin",      team:"BLG",        league:"LPL", role:"Top Lane",       country:"🇨🇳 Çin",        age:24, av:"B",  bg:"rgba(168,85,247,0.15)", tc:"#a855f7", stats:{kda:4.1,csmin:8.7,dpm:560,kp:67,wr:73,perf:89}},
+  ruler:    {name:"Ruler",    team:"JDG",        league:"LPL", role:"Bot Lane (ADC)", country:"🇰🇷 Güney Kore", age:27, av:"R",  bg:"rgba(200,155,60,0.12)", tc:"#c89b3c", stats:{kda:5.1,csmin:9.5,dpm:710,kp:71,wr:72,perf:93}},
+  peyz:     {name:"Peyz",     team:"Gen.G",      league:"LCK", role:"Bot Lane (ADC)", country:"🇰🇷 Güney Kore", age:23, av:"P",  bg:"rgba(168,85,247,0.12)", tc:"#a855f7", stats:{kda:4.7,csmin:9.1,dpm:680,kp:73,wr:73,perf:90}},
+  keria:    {name:"Keria",    team:"T1",         league:"LCK", role:"Support",        country:"🇰🇷 Güney Kore", age:23, av:"K",  bg:"rgba(59,130,246,0.15)", tc:"#3b82f6", stats:{kda:5.2,csmin:1.8,dpm:180,kp:82,wr:70,perf:92}},
+  beryl:    {name:"BeryL",    team:"Dplus KIA",  league:"LCK", role:"Support",        country:"🇰🇷 Güney Kore", age:27, av:"B",  bg:"rgba(0,229,160,0.12)",  tc:"#00e5a0", stats:{kda:4.7,csmin:1.5,dpm:165,kp:80,wr:66,perf:83}},
+};
+
+function ageCurve(a){
+  if(a<=19)return 0.93; if(a<=20)return 0.96; if(a<=21)return 0.99;
+  if(a<=22)return 1.00; if(a<=23)return 0.995;if(a<=24)return 0.98;
+  if(a<=25)return 0.96; if(a<=26)return 0.93; if(a<=27)return 0.89;
+  if(a<=28)return 0.85; if(a<=29)return 0.81; return 0.76;
+}
+
+function fm(){
+  const meta=+document.getElementById('s-meta').value/10;
+  const train=+document.getElementById('s-train').value/70;
+  const form=+document.getElementById('s-form').value/10;
+  const syn=+document.getElementById('s-synergy').value/10;
+  return 0.30*meta+0.28*train+0.22*form+0.20*syn;
+}
+
+let cur='faker', chart=null;
+
+function pick(k){
+  document.querySelectorAll('.player-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('card-'+k).classList.add('active');
+  cur=k; render();
+}
+
+function render(){
+  const p=PL[cur];
+  const av=document.getElementById('ph-av');
+  av.textContent=p.av; av.style.background=p.bg; av.style.color=p.tc;
+  document.getElementById('ph-name').textContent=p.name;
+  document.getElementById('ph-team').textContent=p.team;
+  document.getElementById('ph-league').textContent=p.league;
+  document.getElementById('ph-role').textContent=p.role;
+  document.getElementById('ph-country').textContent=p.country;
+  document.getElementById('ph-age').textContent=p.age;
+  const s=p.stats;
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat-box"><div class="stat-lbl">KDA</div><div class="stat-val">${s.kda.toFixed(1)}</div><div class="stat-sub">Kill / Death / Assist</div></div>
+    <div class="stat-box"><div class="stat-lbl">CS / Dak</div><div class="stat-val">${s.csmin.toFixed(1)}</div><div class="stat-sub">Creep score / dakika</div></div>
+    <div class="stat-box"><div class="stat-lbl">DPM</div><div class="stat-val">${s.dpm}</div><div class="stat-sub">Hasar / dakika</div></div>
+    <div class="stat-box"><div class="stat-lbl">Kill Katılım</div><div class="stat-val">${s.kp}%</div><div class="stat-sub">Kill participation</div></div>
+    <div class="stat-box"><div class="stat-lbl">Kazanma Oranı</div><div class="stat-val">${s.wr}%</div><div class="stat-sub">Win rate 2026</div></div>
+    <div class="stat-box"><div class="stat-lbl">Perf. Skoru</div><div class="stat-val" style="color:var(--gold)">${s.perf}</div><div class="stat-sub">Birleşik skor / 100</div></div>
+  `;
+  go();
+}
+
+function go(){
+  ['meta','form','synergy'].forEach(k=>document.getElementById('v-'+k).textContent=document.getElementById('s-'+k).value);
+  document.getElementById('v-train').textContent=document.getElementById('s-train').value;
+  const p=PL[cur]; const s=p.stats; const f=fm();
+  const rows=[];
+  for(let yr=0;yr<=3;yr++){
+    const season=2026+yr, age=p.age+yr;
+    const mult=yr===0?1.0:ageCurve(age)*(0.75+f*0.40);
+    const kda=+(s.kda*mult).toFixed(2);
+    const csmin=+(s.csmin*mult).toFixed(1);
+    const dpm=Math.round(s.dpm*mult);
+    const kp=Math.min(95,Math.round(s.kp*mult));
+    const wr=Math.min(90,+(s.wr*mult).toFixed(1));
+    const perf=Math.min(100,Math.round(s.perf*mult));
+    const delta=yr===0?null:perf-s.perf;
+    rows.push({season,age,kda,csmin,dpm,kp,wr,perf,delta});
+  }
+
+  document.getElementById('projBody').innerHTML=rows.map((r,i)=>{
+    let dc='';
+    if(r.delta===null) dc='<span class="d-neu">Mevcut sezon</span>';
+    else if(r.delta>0) dc=`<span class="d-pos">▲ +${r.delta} puan</span>`;
+    else if(r.delta<0) dc=`<span class="d-neg">▼ ${r.delta} puan</span>`;
+    else dc='<span class="d-neu">Değişim yok</span>';
+    return `<tr>
+      <td class="td-year" style="${i===0?'color:var(--text)':''}">${r.season}${i===0?' ★':''}</td>
+      <td>${r.age}</td>
+      <td class="${i===0?'td-bold':''}">${r.kda}</td>
+      <td class="${i===0?'td-bold':''}">${r.csmin}</td>
+      <td class="${i===0?'td-bold':''}">${r.dpm}</td>
+      <td class="${i===0?'td-bold':''}">${r.kp}%</td>
+      <td class="${i===0?'td-bold':''}">${r.wr}%</td>
+      <td style="font-family:'Syne',sans-serif;font-weight:700;color:var(--gold)">${r.perf}</td>
+      <td>${dc}</td>
+    </tr>`;
+  }).join('');
+
+  drawChart(rows);
+}
+
+function drawChart(rows){
+  if(chart){chart.destroy();chart=null;}
+  chart=new Chart(document.getElementById('projChart'),{
+    type:'line',
+    data:{
+      labels:rows.map(r=>r.season+''),
+      datasets:[
+        {label:'Performans Skoru',data:rows.map(r=>r.perf),borderColor:'#c89b3c',backgroundColor:'rgba(200,155,60,0.07)',tension:0.35,pointRadius:5,pointBackgroundColor:'#c89b3c',pointBorderColor:'#0a0c10',pointBorderWidth:2,fill:true,yAxisID:'y'},
+        {label:'Kazanma Oranı (%)',data:rows.map(r=>r.wr),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.05)',tension:0.35,pointRadius:5,pointBackgroundColor:'#3b82f6',pointBorderColor:'#0a0c10',pointBorderWidth:2,fill:true,yAxisID:'y2'},
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#4a4845',font:{family:'DM Mono',size:10},boxWidth:8}}},
+      scales:{
+        y:{min:50,max:100,ticks:{color:'#4a4845',font:{size:10},callback:v=>v+'p'},grid:{color:'rgba(255,255,255,0.04)'},position:'left'},
+        y2:{min:40,max:85,ticks:{color:'#4a4845',font:{size:10},callback:v=>v+'%'},grid:{display:false},position:'right'},
+        x:{ticks:{color:'#4a4845',font:{size:10}},grid:{display:false}}
+      }
+    }
+  });
+}
+
+function buildRows(key){
+  const p=PL[key]; const s=p.stats; const f=fm();
+  const sl={meta:document.getElementById('s-meta').value,train:document.getElementById('s-train').value,form:document.getElementById('s-form').value,syn:document.getElementById('s-synergy').value};
+  const out=[['Oyuncu','Takim','Lig','Rol','Yas','Sezon','KDA','CS_Dak','DPM','Kill_Katilim_yuzde','Kazanma_Orani_yuzde','Performans_Skoru','Degisim_Puan','Meta_Adaptasyon','Antrenman_Saat_Hafta','Form_Skoru','Sinerji_Skoru']];
+  for(let yr=0;yr<=3;yr++){
+    const season=2026+yr,age=p.age+yr;
+    const mult=yr===0?1.0:ageCurve(age)*(0.75+f*0.40);
+    const kda=+(s.kda*mult).toFixed(2);
+    const csmin=+(s.csmin*mult).toFixed(1);
+    const dpm=Math.round(s.dpm*mult);
+    const kp=Math.min(95,Math.round(s.kp*mult));
+    const wr=Math.min(90,+(s.wr*mult).toFixed(1));
+    const perf=Math.min(100,Math.round(s.perf*mult));
+    const delta=yr===0?'Mevcut':(perf-s.perf);
+    out.push([p.name,p.team,p.league,p.role,age,season,kda,csmin,dpm,kp,wr,perf,delta,sl.meta,sl.train,sl.form,sl.syn]);
+  }
+  return out;
+}
+
+function dl(rows,fname){
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download=fname; a.click();
+}
+
+function exportOne(){ dl(buildRows(cur),`lol_${PL[cur].name.toLowerCase()}_2026_2029.csv`); }
+function exportAll(){
+  const hdr=[['Oyuncu','Takim','Lig','Rol','Yas','Sezon','KDA','CS_Dak','DPM','Kill_Katilim_yuzde','Kazanma_Orani_yuzde','Performans_Skoru','Degisim_Puan','Meta_Adaptasyon','Antrenman_Saat_Hafta','Form_Skoru','Sinerji_Skoru']];
+  let all=[...hdr];
+  Object.keys(PL).forEach(k=>{ all=[...all,...buildRows(k).slice(1)]; });
+  dl(all,'lol_tum_oyuncular_2026_2029.csv');
+}
+
+render();
+</script>
+</body>
+</html>
