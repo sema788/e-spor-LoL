@@ -2,7 +2,7 @@
 
 > League of Legends profesyonel oyuncularının gerçek verilerine dayanan, 2027–2029 yılları için performans tahmini üreten interaktif simülasyon.
 
-🔗 **[Simülasyonu Aç → sema788.github.io/espor-simulasyon](https://sema788.github.io/espor-simulasyon/)**
+🔗 **[Simülasyonu Aç →https://sema788.github.io/e-spor-LoL/]**
 
 ---
 
